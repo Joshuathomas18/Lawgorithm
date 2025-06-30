@@ -1,8 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled, { createGlobalStyle } from 'styled-components';
 
-const API_BASE = 'http://localhost:8000/api/v1';
-const CHATBOT_API = 'http://localhost:8000/api/v1/chatbot';
+const API_BASE = 'http://localhost:8001/api/v1';
+const CHATBOT_API = 'http://localhost:8001/api/v1/chatbot';
+
+// Debug logging
+console.log('Environment variables check:');
+console.log('REACT_APP_BACKEND_URL:', process.env.REACT_APP_BACKEND_URL);
+console.log('API_BASE:', API_BASE);
+console.log('CHATBOT_API:', CHATBOT_API);
+
+// Add debug alert to see if this runs in browser
 
 const GlobalStyle = createGlobalStyle`
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Poppins:wght@400;600;700&display=swap');
@@ -256,24 +264,38 @@ function App() {
   const [sessionId, setSessionId] = useState(null);
   const [conversationId, setConversationId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState('Initializing...');
   const fileInputRef = useRef();
 
   // Start conversation on mount
   useEffect(() => {
     const startConversation = async () => {
       try {
+        setDebugInfo('Attempting to connect to backend...');
+        console.log('Attempting API call to:', `${API_BASE}/conversations/start`);
+        
         const res = await fetch(`${API_BASE}/conversations/start`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: 'frontend-user', initial_message: messages[0].text })
         });
+        
+        console.log('Response status:', res.status);
         const data = await res.json();
+        console.log('Response data:', data);
+        
         setSessionId(data.session_id);
         setConversationId(data.conversation_id);
+        
         if (!data.session_id || !data.conversation_id) {
+          setDebugInfo('❌ Failed to initialize conversation. Backend may be down.');
           alert('Failed to initialize conversation. Backend may be down or misconfigured.');
+        } else {
+          setDebugInfo('✅ Connected to backend successfully!');
         }
       } catch (err) {
+        console.error('Connection error:', err);
+        setDebugInfo('❌ Connection error: ' + err.toString());
         alert('Error connecting to backend: ' + err);
       }
     };
@@ -354,6 +376,9 @@ function App() {
           <ChatBoxWrapper>
             <ChatTitle>Welcome to Lawgorithm</ChatTitle>
             <ChatDesc>I'm here to help you navigate the legal process. Let's start by understanding your case. What type of case are you dealing with?</ChatDesc>
+            <div style={{fontSize:'12px', color:'#EDC70A', marginBottom:'10px', padding:'8px', background:'#333', borderRadius:'8px'}}>
+              Debug: {debugInfo} | Backend: http://localhost:8001/api | Session: {sessionId ? '✅' : '❌'}
+            </div>
             <ChatMessages>
               {messages.map((msg, idx) => (
                 <Message key={idx} user={msg.user}>{msg.text}</Message>
